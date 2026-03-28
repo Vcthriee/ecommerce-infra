@@ -43,5 +43,5 @@ jobs:
       - run: terraform plan -var-file="terraform.auto.tfvars" -out=tfplan
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve tfplan
+        if: github.ref == 'refs/heads/main' 
+        run: terraform apply -auto-approve tfplan 
