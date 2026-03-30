@@ -98,4 +98,5 @@ module "ecs" {
   ecs_memory             = var.ecs_memory
   ecs_desired_count      = var.ecs_desired_count
 
-} 
+}  
+
