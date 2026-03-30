@@ -37,20 +37,11 @@ jobs:
       - name: Create tfvars
         run: echo "${{ secrets.TFVARS_DEV }}" > terraform.auto.tfvars
 
-      # NEW: Handle stale state locks from previous failed runs
-      - name: Force Unlock Stale State Locks
-        run: |
-          echo "Checking for stale state locks..."
-          # Try to detect and force unlock any existing locks
-          terraform force-unlock -force $(terraform show -json 2>/dev/null | jq -r '.values.root_module.resources[] | select(.type=="aws_dynamodb_table") | .values.id' 2>/dev/null) 2>/dev/null || true
-          echo "Lock cleanup attempted"
-        continue-on-error: true
-
       - run: terraform init -upgrade 
       - run: terraform fmt -check 
       - run: terraform validate 
-      - run: terraform plan -var-file="terraform.auto.tfvars" -out=tfplan -lock-timeout=5m
+      - run: terraform plan -var-file="terraform.auto.tfvars" -out=tfplan
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' 
-        run: terraform apply -auto-approve tfplan -lock-timeout=5m
+        run: terraform apply -auto-approve tfplan
