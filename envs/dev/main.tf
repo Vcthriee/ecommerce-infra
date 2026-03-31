@@ -43,7 +43,7 @@ module "security" {
   vpc_id       = module.networking.vpc_id
 }
 
-# Creates RDS PostgreSQL, RDS Proxy, ElastiCache Redis
+# Creates RDS PostgreSQL, RDS Proxy, ElastiCache Redis_cache
 # Generates its own random password and stores it in Secrets Manager
 module "database" {
   source = "github.com/Vcthriee/Cloud-Infra-Modules//modules/database"
@@ -58,7 +58,7 @@ module "database" {
   db_username                   = var.db_username
 }
 
-# JWT secret stored in Secrets Manager
+# JWT secret stored in Secrets Managers
 # ecommerce-infra owns this secret because it is app-specific
 # The database module owns the db password secret
 resource "aws_secretsmanager_secret" "jwt_secret" {
@@ -75,7 +75,7 @@ resource "aws_secretsmanager_secret_version" "jwt_secret" {
   secret_string = var.jwt_secret
 }
 
-# Creates ECS cluster, ECR repo, ALB, task definition, ECS service
+# Creates ECS cluster, ECR repo, ALB, task definition, ECS services
 # Passes ARNs to ECS so it can read secrets at runtime
 module "ecs" {
   source = "github.com/Vcthriee/Cloud-Infra-Modules//modules/ecs"
@@ -99,5 +99,3 @@ module "ecs" {
   ecs_desired_count      = var.ecs_desired_count
 
 } 
-# trigger
-# Trigger workflow
