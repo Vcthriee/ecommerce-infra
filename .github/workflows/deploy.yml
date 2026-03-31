@@ -34,8 +34,12 @@ jobs:
         with:
           terraform_version: 1.6.0
 
+      # CHANGED: Use heredoc to properly handle multi-line secrets
       - name: Create tfvars
-        run: echo "${{ secrets.TFVARS_DEV }}" > terraform.auto.tfvars
+        run: |
+          cat << 'EOF' > terraform.auto.tfvars
+          ${{ secrets.TFVARS_DEV }}
+          EOF
 
       # NEW: Handle stale state locks from previous failed runs
       - name: Force Unlock Stale State Locks
@@ -53,4 +57,4 @@ jobs:
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' 
-        run: terraform apply -auto-approve tfplan -lock-timeout=5m 
+        run: terraform apply -auto-approve tfplan -lock-timeout=5m
