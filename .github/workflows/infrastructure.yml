@@ -5,6 +5,8 @@ on:
     branches: [main, dev]
     paths:
       - '**.tf'
+      - '**.tfvars'
+      - '.github/workflows/**'  # Add this
 
 permissions:
   id-token: write
