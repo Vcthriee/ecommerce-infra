@@ -6,6 +6,7 @@ on:
     paths:
       - '**.tf'
       - '**.tfvars'
+      - '.github/workflows/**'  # Add this
 
 permissions:
   id-token: write
@@ -34,14 +35,14 @@ jobs:
         with:
           terraform_version: 1.6.0
 
-      - name: Create tfvars
-        run: echo "${{ secrets.TFVARS_DEV }}" > terraform.auto.tfvars
+      - name: Download tfvars from S3
+        run: aws s3 cp s3://cloudthrieesecurity-terraform-tfvars/ecommerce-infra/dev.tfvars terraform.auto.tfvars
 
-      - run: terraform init -upgrade
-      - run: terraform fmt -check
-      - run: terraform validate
-      - run: terraform plan -var-file="terraform.auto.tfvars" -out=tfplan
+      - run: terraform init -upgrade 
+      - run: terraform fmt -check 
+      - run: terraform validate 
+      - run: terraform plan -out=tfplan -lock-timeout=5m
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' 
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan -lock-timeout=5m

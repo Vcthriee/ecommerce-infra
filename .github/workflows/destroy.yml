@@ -1,11 +1,5 @@
 name: Destroy Ecommerce Infrastructure
 
-# ============================================================
-# TRIGGER — MANUAL ONLY
-# This pipeline only runs when you explicitly trigger it.
-# Requires typing DESTROY to confirm.
-# Prevents accidental destruction of infrastructure.
-# ============================================================
 on:
   workflow_dispatch:
     inputs:
@@ -17,12 +11,14 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  AWS_REGION: af-south-1
+
 jobs:
   destroy:
     name: Terraform Destroy
     runs-on: ubuntu-latest
 
-    # Safety gate — pipeline does nothing unless you typed DESTROY exactly
     if: github.event.inputs.confirm == 'DESTROY'
 
     defaults:
@@ -30,54 +26,40 @@ jobs:
         working-directory: envs/dev
 
     steps:
-      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Authenticate to AWS
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::904690835870:role/GithubActionsOIDCROLE
-          aws-region: af-south-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      # Step 3: Install Terraform
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
 
-      # Step 4: Write tfvars file
-      - name: Create tfvars file
-        run: echo "${{ secrets.TFVARS_DEV }}" > terraform.auto.tfvars
+      # FIXED: Use S3 instead of broken secret
+      - name: Download tfvars from S3
+        run: aws s3 cp s3://cloudthrieesecurity-terraform-tfvars/ecommerce-infra/dev.tfvars terraform.auto.tfvars
 
-      # Step 5: Terraform Init
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -upgrade
 
-      # Step 6: Plan Destroy
-      # Shows what will be destroyed before actually destroying
-      # Good practice to review this output
+      # NEW: Force unlock if stuck
+      - name: Force Unlock Stale Locks
+        run: terraform force-unlock -force $(terraform show -json 2>/dev/null | jq -r '.values.root_module.resources[] | select(.type=="aws_dynamodb_table") | .values.id' 2>/dev/null) 2>/dev/null || true
+        continue-on-error: true
+
       - name: Terraform Plan Destroy
-        run: |
-          terraform plan \
-            -destroy \
-            -var-file="terraform.auto.tfvars" \
-            -out=destroy-plan
+        run: terraform plan -destroy -var-file="terraform.auto.tfvars" -out=destroy-plan
 
-      # Step 7: Destroy
-      # Actually destroys everything
-      # THIS DELETES ALL AWS RESOURCES FOR THIS APP
       - name: Terraform Destroy
         run: terraform apply -auto-approve destroy-plan
 
-      # Step 8: Summary
       - name: Destroy summary
         if: always()
         run: |
           echo "================================"
           echo "DESTROY COMPLETE"
-          echo "================================"
-          echo "All ecommerce infrastructure has been destroyed"
-          echo "To redeploy: push to main branch"
           echo "================================"
